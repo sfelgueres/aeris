@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buscador Aeris – RE/MAX</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; max-width: 700px; margin: auto; }
+    input, button { padding: 0.5rem; font-size: 1rem; }
+    input { flex: 1; }
+    button { background: #d71920; color: white; border: none; margin-left: 0.5rem; cursor: pointer; }
+    .result { border: 1px solid #ddd; padding: 1rem; margin-top: 1rem; border-radius: 8px; }
+    .title { font-weight: bold; font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+  <h1>Buscador Aeris – RE/MAX</h1>
+  <p><em>Ejemplo: Casa con jardín y alberca en Querétaro por menos de 3 millones</em></p>
+
+  <div style="display: flex; margin-top: 1rem;">
+    <input id="consulta" type="text" placeholder="Escribe tu búsqueda" />
+    <button onclick="buscar()">Buscar</button>
+  </div>
+
+  <div id="resultados"></div>
+
+  <script>
+    function interpretarConsulta(texto) {
+      const filtros = {};
+      const lower = texto.toLowerCase();
+      if (lower.includes("querétaro")) filtros.ciudad = "Querétaro";
+      if (lower.includes("casa")) filtros.tipo = "Casa";
+      if (lower.includes("alberca")) filtros.alberca = true;
+      if (lower.includes("jardín") || lower.includes("jardin")) filtros.jardin = true;
+      if (lower.includes("terraza")) filtros.terraza = true;
+      const precioMatch = lower.match(/(\d+(?:,\d+)?)(?=\s*(m|millones)?)/);
+      if (precioMatch) filtros.precio_max = parseInt(precioMatch[1].replace(",", "")) * 1000000;
+      const recMatch = lower.match(/(\d+)\s*(rec|recamaras|cuartos)/);
+      if (recMatch) filtros.recamaras = parseInt(recMatch[1]);
+      return filtros;
+    }
+
+    function generarURL(filtros) {
+      const base = "https://remaxmexico.metabaseapp.com/public/question/0e0d8b87-b50a-4cc0-aa47-3dac2a2b1dec.json";
+      const params = new URLSearchParams();
+      for (const key in filtros) {
+        params.append(key, filtros[key]);
+      }
+      return `${base}?${params.toString()}`;
+    }
+
+    async function buscar() {
+      const consulta = document.getElementById("consulta").value;
+      const filtros = interpretarConsulta(consulta);
+      const url = generarURL(filtros);
+      const contenedor = document.getElementById("resultados");
+      contenedor.innerHTML = "Buscando propiedades...";
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.length === 0) {
+          contenedor.innerHTML = "<p>No se encontraron propiedades con esos criterios.</p>";
+        } else {
+          contenedor.innerHTML = data.map(prop => `
+            <div class="result">
+              <div class="title">${prop.titulo || "Propiedad sin título"}</div>
+              <div>${prop.ciudad || "Ciudad desconocida"}</div>
+              <div>Precio: ${prop.mxn_corriente ? prop.mxn_corriente.toLocaleString("es-MX", { style: 'currency', currency: 'MXN' }) : "No disponible"}</div>
+              <div>Recámaras: ${prop.recamaras || prop.numero_recamaras || "-"}</div>
+            </div>
+          `).join("");
+        }
+      } catch (error) {
+        contenedor.innerHTML = `<p style="color:red;">Error al consultar Metabase.</p>`;
+        console.error("Error:", error);
+      }
+    }
+  </script>
+</body>
+</html>
