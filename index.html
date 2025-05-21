@@ -41,7 +41,7 @@
     }
 
     function generarURL(filtros) {
-      const base = "https://remaxmexico.metabaseapp.com/public/question/0e0d8b87-b50a-4cc0-aa47-3dac2a2b1dec.json";
+      const base = "/api/aeris";
       const params = new URLSearchParams();
       for (const key in filtros) {
         params.append(key, filtros[key]);
